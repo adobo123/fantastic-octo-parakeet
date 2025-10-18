@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Orange Burst Game</title>
+<style>
+  canvas {
+    background: #f0f8ff;
+    display: block;
+    margin: 0 auto;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const basketWidth = 80;
+const basketHeight = 20;
+let basketX = canvas.width/2 - basketWidth/2;
+let rightPressed = false;
+let leftPressed = false;
+
+let oranges = [];
+let burstOranges = [];
+let score = 0;
+let gameOver = false;
+
+// Handle key events
+document.addEventListener("keydown", keyDownHandler);
+document.addEventListener("keyup", keyUpHandler);
+
+function keyDownHandler(e) {
+  if(e.key == "Right" || e.key == "ArrowRight") {
+    rightPressed = true;
+  }
+  else if(e.key == "Left" || e.key == "ArrowLeft") {
+    leftPressed = true;
+  }
+}
+
+function keyUpHandler(e) {
+  if(e.key == "Right" || e.key == "ArrowRight") {
+    rightPressed = false;
+  }
+  else if(e.key == "Left" || e.key == "ArrowLeft") {
+    leftPressed = false;
+  }
+}
+
+// Oranges class
+class Orange {
+  constructor() {
+    this.x = Math.random() * (canvas.width - 20);
+    this.y = -20;
+    this.radius = 15;
+    this.speed = 2 + Math.random() * 2;
+    this.bursting = false;
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+    ctx.fillStyle = "orange";
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  update() {
+    this.y += this.speed;
+    // Randomly burst
+    if (Math.random() < 0.001 && !this.bursting) {
+      this.burst();
+    }
+  }
+
+  burst() {
+    this.bursting = true;
+    // Create burst pieces
+    for (let i=0; i<8; i++) {
+      burstOranges.push(new BurstPiece(this.x, this.y));
+    }
+  }
+}
+
+// Burst piece class
+class BurstPiece {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size = 4 + Math.random() * 3;
+    this.angle = Math.random() * 2*Math.PI;
+    this.speedX = Math.cos(this.angle) * (2 + Math.random() * 3);
+    this.speedY = Math.sin(this.angle) * (2 + Math.random() * 3);
+    this.life = 60; // frames
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+    ctx.fillStyle = "darkorange";
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    this.life--;
+  }
+}
+
+function drawBasket() {
+  ctx.fillStyle = "brown";
+  ctx.fillRect(basketX, canvas.height - basketHeight - 10, basketWidth, basketHeight);
+}
+
+function drawScore() {
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "black";
+  ctx.fillText("Score: " + score, 10, 20);
+}
+
+// Draw "SIGN" text in the middle in orange
+function drawSign() {
+  ctx.font = "48px Arial";
+  ctx.fillStyle = "orange";
+  ctx.textAlign = "center";
+  ctx.fillText("SIGN", canvas.width/2, canvas.height/2);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw "SIGN" in the middle
+  drawSign();
+
+  // Draw basket
+  drawBasket();
+
+  // Draw oranges
+  oranges.forEach((orange, index) => {
+    orange.draw();
+    orange.update();
+
+    // Check for catch
+    if (
+      orange.y + orange.radius >= canvas.height - basketHeight - 10 &&
+      orange.x >= basketX &&
+      orange.x <= basketX + basketWidth
+    ) {
+      oranges.splice(index,1);
+      score += 10;
+    }
+
+    // Remove if off screen
+    if (orange.y - orange.radius > canvas.height) {
+      oranges.splice(index,1);
+    }
+  });
+
+  // Draw burst oranges
+  burstOranges.forEach((p, index) => {
+    p.draw();
+    p.update();
+    if (p.life <= 0) {
+      burstOranges.splice(index,1);
+    }
+  });
+
+  // Draw score
+  drawScore();
+
+  // Move basket
+  if (rightPressed && basketX < canvas.width - basketWidth) {
+    basketX += 5;
+  } else if (leftPressed && basketX > 0) {
+    basketX -= 5;
+  }
+
+  // Add new orange periodically
+  if (Math.random() < 0.02) {
+    oranges.push(new Orange());
+  }
+
+  if (!gameOver) {
+    requestAnimationFrame(draw);
+  }
+}
+
+// Start the game
+draw();
+</script>
+</body>
+</html>
